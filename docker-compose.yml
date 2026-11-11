@@ -1,0 +1,16 @@
+services:
+  repartie:
+    build: .
+    container_name: repartie
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      APP_PASSWORD: ${APP_PASSWORD:?Définis APP_PASSWORD dans le fichier .env}
+      MCP_TOKEN: ${MCP_TOKEN:?Définis MCP_TOKEN dans le fichier .env}
+      SEED_DEMO: ${SEED_DEMO:-1}
+    volumes:
+      - repartie-data:/data
+
+volumes:
+  repartie-data:
