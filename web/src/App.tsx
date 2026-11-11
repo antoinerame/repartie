@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { api, type SearchResult, type TopicCard, useData } from './api';
 import { Icon, Modal, SideTag } from './ui';
 import Home from './pages/Home';
@@ -8,6 +8,7 @@ import Tree from './pages/Tree';
 import Training from './pages/Training';
 import Cheatsheet from './pages/Cheatsheet';
 import Gaps from './pages/Gaps';
+import { PrincipleDetail, PrincipleList } from './pages/Principles';
 import Settings from './pages/Settings';
 
 interface Me { authRequired: boolean; authed: boolean; mcpTokenSet: boolean }
@@ -67,6 +68,7 @@ function Logo() {
 }
 
 function Shell({ me, onLogout }: { me: Me; onLogout: () => void }) {
+  const location = useLocation();
   const [searchOpen, setSearchOpen] = useState(false);
   const { data: topics } = useData<TopicCard[]>('/overview');
   const gapCount = topics?.reduce((n, t) => n + t.gapCount, 0) ?? 0;
@@ -86,7 +88,8 @@ function Shell({ me, onLogout }: { me: Me; onLogout: () => void }) {
         <nav className="nav">
           <NavLink to="/" end>Sujets</NavLink>
           <NavLink to="/entrainement">Entraînement</NavLink>
-          <NavLink to="/trous">Trous{gapCount > 0 && <span className="badge badge-gap">{gapCount}</span>}</NavLink>
+          <NavLink to="/trous">À travailler{gapCount > 0 && <span className="badge badge-gap">{gapCount}</span>}</NavLink>
+          <NavLink to="/principes" className={({ isActive }) => (isActive || location.pathname.startsWith('/principe/') ? 'active' : '')}>Principes</NavLink>
         </nav>
         <div className="topbar-right">
           <button className="search-btn" onClick={() => setSearchOpen(true)} aria-label="Rechercher">
@@ -104,6 +107,8 @@ function Shell({ me, onLogout }: { me: Me; onLogout: () => void }) {
           <Route path="/entrainement" element={<Training />} />
           <Route path="/fiche/:id" element={<Cheatsheet />} />
           <Route path="/trous" element={<Gaps />} />
+          <Route path="/principes" element={<PrincipleList />} />
+          <Route path="/principe/:id" element={<PrincipleDetail />} />
           <Route path="/reglages" element={<Settings me={me} onLogout={onLogout} />} />
           <Route path="*" element={<div className="page"><h1>Page introuvable</h1><p className="lead"><Link to="/">Retour aux sujets</Link></p></div>} />
         </Routes>

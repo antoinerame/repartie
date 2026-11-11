@@ -20,16 +20,17 @@ export default function Cheatsheet() {
       return v;
     };
     const rank = (a: Arg, b: Arg) => b.strength - a.strength || d(a) - d(b) || a.position - b.position;
-    const mine = args.filter((a) => a.side === 'moi').sort(rank).slice(0, 5);
-    const objections = args.filter((a) => a.side === 'autre' && !a.concede && a.kind !== 'sophisme').sort(rank).slice(0, 6)
-      .map((o) => ({ o, best: args.filter((r) => r.parentId === o.id && r.side === 'moi').sort(rank)[0] as Arg | undefined }));
-    const concede = args.filter((a) => a.concede);
-    const fallacies = args.filter((a) => a.side === 'autre' && a.kind === 'sophisme')
-      .map((o) => ({ o, best: args.filter((r) => r.parentId === o.id && r.side === 'moi').sort(rank)[0] as Arg | undefined }));
+    const answer = (o: Arg) => args.filter((r) => r.parentId === o.id && r.stance === 'pour').sort(rank)[0] as Arg | undefined;
+    const mine = args.filter((a) => a.stance === 'pour' && !a.closed).sort(rank).slice(0, 5);
+    const objections = args.filter((a) => a.stance === 'contre' && !a.closed && a.kind !== 'sophisme').sort(rank).slice(0, 6)
+      .map((o) => ({ o, best: answer(o) }));
+    const concede = args.filter((a) => a.closure === 'concede');
+    const values = args.filter((a) => a.closure === 'valeurs');
+    const fallacies = args.filter((a) => a.stance === 'contre' && a.kind === 'sophisme').map((o) => ({ o, best: answer(o) }));
     const seen = new Set<string>();
-    const sources = args.filter((a) => a.side === 'moi').flatMap((a) => a.sources.map((s) => ({ s, a })))
+    const sources = args.filter((a) => a.stance === 'pour').flatMap((a) => a.sources.map((s) => ({ s, a })))
       .filter(({ s }) => (seen.has(s.label) ? false : (seen.add(s.label), true)));
-    return { mine, objections, concede, fallacies, sources };
+    return { mine, objections, concede, values, fallacies, sources };
   }, [sub]);
 
   if (error) return <div className="page"><Empty icon="alert" title={error}><Link to="/">Retour aux sujets</Link></Empty></div>;
@@ -105,7 +106,26 @@ export default function Cheatsheet() {
         <section className="sheet-section">
           <h2>Ce que je concède</h2>
           <ul className="sheet-list plain">
-            {sheet.concede.map((a) => <li key={a.id}><strong>{a.title}</strong>{a.body && <p>{a.body}</p>}</li>)}
+            {sheet.concede.map((a) => (
+              <li key={a.id}>
+                <strong>{a.title}</strong>{a.body && <p>{a.body}</p>}
+                {a.rebound && <p className="rebound"><span className="pair-who">Et pourtant</span> {a.rebound}</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {sheet.values.length > 0 && (
+        <section className="sheet-section">
+          <h2>Désaccords de valeurs</h2>
+          <ul className="sheet-list plain">
+            {sheet.values.map((a) => (
+              <li key={a.id}>
+                <strong>{a.title}</strong>{a.body && <p>{a.body}</p>}
+                {a.rebound && <p className="rebound"><span className="pair-who">Je le nomme</span> {a.rebound}</p>}
+              </li>
+            ))}
           </ul>
         </section>
       )}
@@ -116,7 +136,7 @@ export default function Cheatsheet() {
           <ul className="sheet-pairs">
             {sheet.fallacies.map(({ o, best }) => (
               <li key={o.id}>
-                <div className="pair-q side-autre"><span className="pair-who">On me dit</span><p>{o.title}{o.body && <small>{o.body}</small>}</p></div>
+                <div className="pair-q side-autre"><span className="pair-who">{o.fallacy || 'On me dit'}</span><p>{o.title}{o.body && <small>{o.body}</small>}</p></div>
                 {best && <div className="pair-a side-moi"><span className="pair-who">Je réponds</span><div><strong>{best.title}</strong></div></div>}
               </li>
             ))}
