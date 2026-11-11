@@ -24,13 +24,26 @@ Règles :
 5. Si un même argument sert à plusieurs endroits, utilise link_argument plutôt que de le recopier.
 6. Ne supprime rien sans que l'utilisateur le demande.`;
 
-const sourceSchema = z.object({
+/**
+ * Objet zod strict : un champ inconnu est refusé avec un message qui liste les champs acceptés,
+ * au lieu d'être ignoré en silence (un client avec un schéma périmé voit tout de suite son erreur).
+ */
+function strict<T extends z.ZodRawShape>(shape: T) {
+  const allowed = Object.keys(shape).join(', ') || '(aucun)';
+  return z.strictObject(shape, {
+    error: (iss) => iss.code === 'unrecognized_keys'
+      ? `Champ(s) inconnu(s) : ${iss.keys.join(', ')}. Champs acceptés : ${allowed}.`
+      : undefined,
+  });
+}
+
+const sourceSchema = strict({
   label: z.string().describe('Chiffre ou référence, ex. « COR, rapport annuel 2024 : déficit de 0,4 % du PIB »'),
   url: z.string().optional().describe('Lien http(s) vers la source'),
   date: z.string().optional().describe('Date ou année de la source'),
 });
 
-const backerSchema = z.object({
+const backerSchema = strict({
   name: z.string().describe('Parti, personnalité ou organisation, ex. « RN », « LFI », « Institut Montaigne »'),
   source: z.string().optional().describe('Preuve de l’attribution : programme, déclaration, vote, article (obligatoire en pratique)'),
   url: z.string().optional(),
@@ -73,6 +86,7 @@ export function buildMcpServer() {
   server.registerTool('list_topics', {
     title: 'Lister les sujets',
     description: 'Liste tous les sujets et leurs sous-parties, avec le nombre d’arguments, de trous et d’éléments à vérifier.',
+    inputSchema: strict({}),
     annotations: ro,
   }, safe(() => {
     const topics = repo.overview();
@@ -88,17 +102,17 @@ export function buildMcpServer() {
   server.registerTool('get_tree', {
     title: 'Lire un arbre de débat',
     description: 'Renvoie l’arbre complet d’une sous-partie sous forme de plan indenté, avec l’identifiant, la relation au parent et la position (pour / contre moi) de chaque argument. À appeler avant d’ajouter quoi que ce soit.',
-    inputSchema: {
+    inputSchema: strict({
       subtopic_id: z.number().int(),
       detail: z.boolean().optional().describe('Inclure le développement, les sources et les sources d’attribution'),
-    },
+    }),
     annotations: ro,
   }, safe(({ subtopic_id, detail }) => repo.outline(subtopic_id, !!detail)));
 
   server.registerTool('search', {
     title: 'Rechercher',
     description: 'Recherche plein texte dans les sujets, sous-parties, principes et arguments (y compris sources et partis). Utile pour retrouver un argument avant de le réutiliser ou d’éviter un doublon.',
-    inputSchema: { query: z.string() },
+    inputSchema: strict({ query: z.string() }),
     annotations: ro,
   }, safe(({ query }) => {
     const r: any = repo.search(query);
@@ -113,7 +127,7 @@ export function buildMcpServer() {
   server.registerTool('find_gaps', {
     title: 'Trouver les trous',
     description: 'Liste les arguments qui vont contre l’utilisateur et auxquels il n’a encore aucune réponse (hors branches closes : points concédés et désaccords de valeurs). Filtrable par sujet ou sous-partie.',
-    inputSchema: { topic_id: z.number().int().optional(), subtopic_id: z.number().int().optional() },
+    inputSchema: strict({ topic_id: z.number().int().optional(), subtopic_id: z.number().int().optional() }),
     annotations: ro,
   }, safe(({ topic_id, subtopic_id }) => {
     const g = repo.gaps({ topicId: topic_id, subtopicId: subtopic_id });
@@ -127,7 +141,7 @@ export function buildMcpServer() {
   server.registerTool('find_unsourced', {
     title: 'Trouver ce qui est à vérifier',
     description: 'Liste ce qui est affirmé sans preuve : arguments marqués « à vérifier », faits sans source, attributions à un parti sans source. Complément de find_gaps.',
-    inputSchema: { topic_id: z.number().int().optional(), subtopic_id: z.number().int().optional() },
+    inputSchema: strict({ topic_id: z.number().int().optional(), subtopic_id: z.number().int().optional() }),
     annotations: ro,
   }, safe(({ topic_id, subtopic_id }) => {
     const list = repo.unsourced({ topicId: topic_id, subtopicId: subtopic_id });
@@ -139,6 +153,7 @@ export function buildMcpServer() {
   server.registerTool('list_principles', {
     title: 'Lister les principes',
     description: 'Liste les principes de l’utilisateur (critères qui reviennent d’un sujet à l’autre) et le nombre d’arguments qui s’en servent.',
+    inputSchema: strict({}),
     annotations: ro,
   }, safe(() => {
     const list = repo.listPrinciples();
@@ -149,7 +164,7 @@ export function buildMcpServer() {
   server.registerTool('get_principle', {
     title: 'Lire un principe',
     description: 'Montre tous les arguments qui mobilisent un principe, avec leur position (pour / contre l’utilisateur). Sert au test d’inversion : l’utilisateur applique-t-il ce principe de façon cohérente d’un sujet à l’autre ?',
-    inputSchema: { principle_id: z.number().int() },
+    inputSchema: strict({ principle_id: z.number().int() }),
     annotations: ro,
   }, safe(({ principle_id }) => {
     const p = repo.getPrinciple(principle_id);
@@ -164,7 +179,7 @@ export function buildMcpServer() {
   server.registerTool('create_principle', {
     title: 'Créer un principe',
     description: 'Crée un principe (ex. « Non-nuisance », « Tyrannie de la majorité »). On peut aussi en créer à la volée via le champ principles des arguments.',
-    inputSchema: { title: z.string(), description: z.string().optional() },
+    inputSchema: strict({ title: z.string(), description: z.string().optional() }),
   }, safe((a) => {
     const p = repo.createPrinciple(a);
     return `Principe créé : ${p.title} (principle_id=${p.id})`;
@@ -173,10 +188,10 @@ export function buildMcpServer() {
   server.registerTool('create_topic', {
     title: 'Créer un sujet',
     description: 'Crée un nouveau sujet sur la page d’accueil (ex. « Retraites »). Vérifie d’abord avec list_topics qu’il n’existe pas déjà.',
-    inputSchema: {
+    inputSchema: strict({
       title: z.string(),
       description: z.string().optional().describe('Une phrase de présentation'),
-    },
+    }),
   }, safe((a) => {
     const t = repo.createTopic(a);
     return `Sujet créé : ${t.title} (topic_id=${t.id})`;
@@ -185,11 +200,11 @@ export function buildMcpServer() {
   server.registerTool('create_subtopic', {
     title: 'Créer une sous-partie',
     description: 'Crée une sous-partie dans un sujet. Son titre est la question ou la thèse débattue (ex. « Faut-il reculer l’âge légal ? »). Elle contient un arbre de débat.',
-    inputSchema: {
+    inputSchema: strict({
       topic_id: z.number().int(),
       title: z.string(),
       description: z.string().optional(),
-    },
+    }),
   }, safe(({ topic_id, title, description }) => {
     const s = repo.createSubtopic({ topicId: topic_id, title, description });
     return `Sous-partie créée : ${s.title} (subtopic_id=${s.id})`;
@@ -198,11 +213,11 @@ export function buildMcpServer() {
   server.registerTool('add_argument', {
     title: 'Ajouter un argument',
     description: 'Ajoute un argument à un arbre. Avec parent_id, il répond à cet argument ; sinon il est posé à la racine de subtopic_id (argument d’ouverture).',
-    inputSchema: {
+    inputSchema: strict({
       subtopic_id: z.number().int().optional().describe('Obligatoire si parent_id est absent'),
       parent_id: z.number().int().optional().describe('Argument auquel celui-ci répond'),
       ...contentFields,
-    },
+    }),
   }, safe(({ subtopic_id, parent_id, ...rest }) => {
     const a = repo.createArgument({ subtopicId: subtopic_id, parentId: parent_id, ...rest });
     return `Argument ajouté : ${tag(a)}`;
@@ -211,15 +226,15 @@ export function buildMcpServer() {
   server.registerTool('add_arguments', {
     title: 'Ajouter plusieurs arguments',
     description: 'Ajoute tout un morceau d’arbre en un seul appel. Chaque élément se rattache soit à un argument existant (parent_id), soit à un élément précédent de la même liste (parent_temp_id → son temp_id), soit à la racine. Les parents doivent précéder leurs enfants dans la liste.',
-    inputSchema: {
+    inputSchema: strict({
       subtopic_id: z.number().int().describe('Sous-partie cible'),
-      arguments: z.array(z.object({
+      arguments: z.array(strict({
         temp_id: z.string().optional().describe('Identifiant temporaire pour que d’autres éléments de la liste s’y rattachent'),
         parent_temp_id: z.string().optional().describe('temp_id d’un élément précédent de cette liste'),
         parent_id: z.number().int().optional().describe('Identifiant d’un argument déjà existant'),
         ...contentFields,
       })).min(1),
-    },
+    }),
   }, safe(({ subtopic_id, arguments: items }) => {
     const created = repo.createArguments(subtopic_id, items.map(({ temp_id, parent_temp_id, parent_id, ...rest }) => ({
       tempId: temp_id, parentTempId: parent_temp_id, parentId: parent_id, ...rest,
@@ -230,13 +245,13 @@ export function buildMcpServer() {
   server.registerTool('link_argument', {
     title: 'Réutiliser un argument',
     description: 'Place dans un arbre un lien vers un argument existant (même contenu, mis à jour partout à la fois). Utile quand un argument — « la dette », par exemple — revient dans plusieurs débats.',
-    inputSchema: {
+    inputSchema: strict({
       source_id: z.number().int().describe('Argument existant à réutiliser'),
       subtopic_id: z.number().int().optional(),
       parent_id: z.number().int().optional(),
       side: z.enum(['moi', 'autre']).optional(),
       relation: z.enum(['refute', 'renforce', 'nuance']).optional(),
-    },
+    }),
   }, safe(({ source_id, subtopic_id, parent_id, side, relation }) => {
     const a = repo.createArgument({ refId: source_id, subtopicId: subtopic_id, parentId: parent_id, side, relation });
     return `Lien créé : ${tag(a)} réutilise #${a.refId}`;
@@ -245,11 +260,11 @@ export function buildMcpServer() {
   server.registerTool('update_argument', {
     title: 'Modifier un argument',
     description: 'Modifie un argument existant. Seuls les champs fournis changent (backers et principles remplacent la liste entière).',
-    inputSchema: {
+    inputSchema: strict({
       id: z.number().int(),
       ...contentFields,
       title: z.string().optional(),
-    },
+    }),
   }, safe(({ id, ...patch }) => {
     const a = repo.updateArgument(id, patch);
     return `Argument mis à jour : ${tag(a)}`;
@@ -258,11 +273,11 @@ export function buildMcpServer() {
   server.registerTool('move_argument', {
     title: 'Déplacer un argument',
     description: 'Déplace un argument (et toutes ses réponses) sous un autre parent, ou à la racine d’une sous-partie.',
-    inputSchema: {
+    inputSchema: strict({
       id: z.number().int(),
       new_parent_id: z.number().int().optional().describe('Nouveau parent. Absent = racine.'),
       subtopic_id: z.number().int().optional().describe('Sous-partie cible si déplacement à la racine d’un autre arbre'),
-    },
+    }),
   }, safe(({ id, new_parent_id, subtopic_id }) => {
     const a = repo.moveArgument(id, { parentId: new_parent_id ?? null, subtopicId: subtopic_id });
     return `Argument #${a.id} déplacé. Vérifie sa relation au nouveau parent (update_argument relation) si besoin.`;
@@ -271,7 +286,7 @@ export function buildMcpServer() {
   server.registerTool('delete_argument', {
     title: 'Supprimer un argument',
     description: 'Supprime un argument ET toutes les réponses situées en dessous. Irréversible : à n’utiliser que sur demande explicite de l’utilisateur.',
-    inputSchema: { id: z.number().int() },
+    inputSchema: strict({ id: z.number().int() }),
     annotations: { destructiveHint: true },
   }, safe(({ id }) => {
     const r = repo.deleteArgument(id);
