@@ -309,3 +309,48 @@
   .sheet-section { padding: 14px 0; }
   .sheet a { text-decoration: none; }
 }
+
+/* ---------- relation, clôture, vérification, partis, principes ---------- */
+.node-rel { font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--fs-2xs, 11px); color: var(--muted); letter-spacing: .02em; }
+.node.is-closed { opacity: .62; }
+.node.filter-out { opacity: .22; }
+.node.filter-in { outline: 2px solid var(--ink); outline-offset: 2px; }
+.nf-check { color: var(--gap); }
+.nf-stance-pour { color: var(--moi); }
+.nf-stance-contre { color: var(--autre); }
+.nf-fallacy { color: var(--bad); }
+.nf-backers, .nf-principles { color: var(--ink-2); text-transform: none; letter-spacing: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nf-principles::before { content: '§ '; color: var(--muted); }
+.tree-filter { width: auto; height: 30px; padding: 0 28px 0 10px; font-size: var(--fs-sm, 13px); }
+.tree-filter.on { border-color: var(--ink); font-weight: 600; }
+.stance-hint { font-weight: 600; }
+.stance-hint.stance-pour { color: var(--moi); }
+.stance-hint.stance-contre { color: var(--autre); }
+.prop > .fallacy-pick, .prop > .rebound-field { grid-column: 2; margin: 4px 0 0; }
+.fallacy-pick input { padding: 6px 9px; font-size: var(--fs-sm, 13px); }
+.rebound-field textarea { font-size: var(--fs-sm, 13px); }
+.backer-warn { display: inline-flex; align-items: center; gap: 4px; color: var(--gap); font-size: var(--fs-xs, 12px); }
+.tag-list { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; border: 1px solid var(--line-strong, var(--wire)); border-radius: var(--r-xs, 2px); font-size: var(--fs-sm, 13px); }
+.tag button { border: 0; background: transparent; color: var(--muted); display: inline-grid; place-items: center; padding: 2px; }
+.tag button:hover { color: var(--ink); }
+.sheet .rebound { margin-top: 4px; color: var(--ink); }
+.sheet .rebound .pair-who { margin-right: 6px; color: var(--moi); }
+
+/* ---------- à travailler / principes ---------- */
+.tab-count { font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--fs-2xs, 11px); color: var(--muted); margin-left: 4px; }
+.check-reasons { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-xs, 12px); color: var(--gap); }
+.check-reasons li { display: flex; align-items: center; gap: 5px; }
+.principle-link { text-decoration: none; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.principle-link:hover .principle-title { text-decoration: underline; text-underline-offset: 3px; }
+.principle-title { font-family: var(--serif); font-weight: 700; font-stretch: 87%; font-size: var(--fs-lg, 17px); }
+.principle-list .gap-row { align-items: center; }
+.principle-sum { margin-top: 8px; font-size: var(--fs-sm, 13px); }
+.principle-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 24px; }
+.principle-col h2 { display: flex; align-items: baseline; gap: 8px; font-family: var(--serif); font-weight: 700; font-stretch: 87%; font-size: var(--fs-xl, 21px); padding-bottom: 8px; border-bottom: 2px solid var(--ink); }
+.principle-hint { font-size: var(--fs-sm, 13px); margin: 8px 0 12px; }
+.principle-uses { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.principle-uses .say-title { text-decoration: none; display: block; }
+.principle-uses .say-title:hover { text-decoration: underline; }
+@media (max-width: 900px) { .principle-cols { grid-template-columns: 1fr; } }
+.drawer-body { overflow-x: hidden; }

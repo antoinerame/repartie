@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { api, type Arg, type Side, type SubFull, SIDE_LABEL, useData } from '../api';
+import { api, type Arg, type Side, type SubFull, SIDE_LABEL, useData, CLOSURE_LABEL, RELATION_LABEL } from '../api';
 import { Confirm, Empty, Icon, KindChip, SideTag, Strength, plural } from '../ui';
 import { fr } from '../views-ui';
 import Editor, { type Draft } from './Editor';
@@ -56,6 +56,7 @@ export default function Tree() {
   const { data: sub, error, reload } = useData<SubFull>(`/subtopics/${id}`);
   const [params, setParams] = useSearchParams();
 
+  const [backer, setBacker] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [preview, setPreview] = useState<{ side: Side; title: string } | null>(null);
@@ -261,13 +262,19 @@ export default function Tree() {
     );
   };
 
+  const backerNames = [...new Set(order.flatMap((a) => a.backers.map((b) => b.name)))].sort((x, y) => x.localeCompare(y, 'fr'));
+
   const Branch = (a: Arg) => {
     const children = kids.get(a.id) ?? [];
     const replying = draft?.parentId === a.id;
     const isCollapsed = collapsed.has(a.id) && !replying;
     const dim = moving != null && inSubtree(a.id, moving);
     const isSelected = selected === a.id || replying;
-    const hasFoot = a.isGap || a.concede || a.sources.length > 0;
+    const unsourcedBacker = a.backers.some((b) => !b.source && !b.url);
+    const offSide = (a.side === 'autre' && a.stance === 'pour') || (a.side === 'moi' && a.stance === 'contre');
+    const filteredOut = backer !== '' && !a.backers.some((b) => b.name === backer);
+    const hasFoot = a.isGap || !!a.closure || a.verify || unsourcedBacker || a.sources.length > 0 || a.backers.length > 0
+      || (a.kind === 'sophisme' && !!a.fallacy) || offSide || a.principles.length > 0;
     return (
       <div className="branch">
         <div id={`node-${a.id}`} role="button" tabIndex={0} aria-pressed={isSelected}
@@ -275,7 +282,8 @@ export default function Tree() {
           className={[
             'node', `side-${a.side}`,
             isSelected ? 'selected' : thread.has(a.id) ? 'on-thread' : '',
-            a.isGap ? 'is-gap' : '', a.concede ? 'is-concede' : '',
+            a.isGap ? 'is-gap' : '', a.closure ? 'is-concede' : '', a.closed && !a.closure ? 'is-closed' : '',
+            backer ? (filteredOut ? 'filter-out' : 'filter-in') : '',
             flash === a.id ? 'flash' : '', dim ? 'dim' : '', moving && !dim ? 'target' : '',
           ].join(' ')}
           onClick={() => clickNode(a)}
@@ -286,6 +294,7 @@ export default function Tree() {
           <div className="node-top">
             <SideTag side={a.side} />
             <KindChip kind={a.kind} />
+            {a.parentId != null && a.relation !== 'refute' && <span className="node-rel">{RELATION_LABEL[a.relation].toLowerCase()}</span>}
             {a.refId && <span className="node-link" title="Argument réutilisé"><Icon name="link" size={13} /></span>}
             <Strength value={a.strength} />
           </div>
@@ -293,8 +302,13 @@ export default function Tree() {
           {hasFoot && (
             <div className="node-foot">
               {a.isGap && <span className="nf nf-gap"><Icon name="alert" size={12} /> Sans réponse</span>}
-              {a.concede && <span className="nf nf-concede"><Icon name="flag" size={12} /> Concédé</span>}
+              {offSide && <span className={`nf nf-stance-${a.stance}`}>{a.stance === 'pour' ? 'Dans ton sens' : 'Contre toi'}</span>}
+              {a.closure && <span className="nf nf-concede"><Icon name="flag" size={12} /> {CLOSURE_LABEL[a.closure]}</span>}
+              {(a.verify || unsourcedBacker) && <span className="nf nf-check"><Icon name="alert" size={12} /> À vérifier</span>}
+              {a.kind === 'sophisme' && a.fallacy && <span className="nf nf-fallacy">{a.fallacy}</span>}
               {a.sources.length > 0 && <span className="nf">{plural(a.sources.length, 'source')}</span>}
+              {a.backers.length > 0 && <span className="nf nf-backers" title="Défendu par">{a.backers.map((b) => b.name).join(' · ')}</span>}
+              {a.principles.length > 0 && <span className="nf nf-principles" title="Principes">{a.principles.map((p) => p.title).join(' · ')}</span>}
             </div>
           )}
           {!moving && (
@@ -327,6 +341,12 @@ export default function Tree() {
           <span>{sub.title}</span>
         </nav>
         <div className="tree-tools">
+          {backerNames.length > 0 && (
+            <select className={`tree-filter ${backer ? 'on' : ''}`} value={backer} onChange={(e) => setBacker(e.target.value)} aria-label="Filtrer par parti" title="Mettre en avant ce que défend un parti">
+              <option value="">Tous les partis</option>
+              {backerNames.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          )}
           {gapIds.length > 0 && (
             <button className="btn btn-sm btn-gap" onClick={nextGap} title="Aller au trou suivant">
               <Icon name="alert" size={14} /> {plural(gapIds.length, 'trou')}
