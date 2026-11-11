@@ -78,7 +78,8 @@ export function seedIfEmpty() {
       body: "Sans baisse du temps de travail, on concentre la fatigue : journées plus longues, garde d'enfants plus compliquée, risque d'accident accru en fin de poste.",
     },
     {
-      side: 'autre', kind: 'fait', strength: 3, concede: true,
+      side: 'autre', kind: 'fait', strength: 3, closure: 'concede',
+      rebound: "Et justement : on peut l'ouvrir là où ça marche sans l'imposer là où ça ne marche pas.",
       title: "Tous les métiers ne s'y prêtent pas de la même façon",
       body: "Travail posté, soins, commerce : là où la présence compte, moins d'heures par personne veut dire embaucher. Mieux vaut le reconnaître d'emblée.",
     },

@@ -55,6 +55,47 @@ CREATE INDEX IF NOT EXISTS idx_args_ref ON arguments(ref_id);
 CREATE INDEX IF NOT EXISTS idx_subs_topic ON subtopics(topic_id);
 `);
 
+/* ---------- migrations (bases existantes) ---------- */
+function columns(table: string): string[] {
+  return (db.prepare(`PRAGMA table_info(${table})`).all() as any[]).map((c) => c.name);
+}
+function addColumn(table: string, name: string, def: string): boolean {
+  if (columns(table).includes(name)) return false;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${def}`);
+  return true;
+}
+
+// Relation au parent : contredit / renforce / nuance. Le camp (side) ne dit plus que qui parle.
+if (addColumn('arguments', 'relation', `TEXT NOT NULL DEFAULT 'refute'`)) {
+  db.exec(`UPDATE arguments SET relation = CASE
+             WHEN (SELECT p.side FROM arguments p WHERE p.id = arguments.parent_id) = arguments.side THEN 'renforce'
+             ELSE 'refute' END
+           WHERE parent_id IS NOT NULL`);
+}
+// Clôture d'une branche : '' | 'concede' | 'valeurs', avec une phrase de rebond (« et pourtant »).
+if (addColumn('arguments', 'closure', `TEXT NOT NULL DEFAULT ''`)) {
+  db.exec(`UPDATE arguments SET closure = 'concede' WHERE concede = 1`);
+}
+addColumn('arguments', 'rebound', `TEXT NOT NULL DEFAULT ''`);
+addColumn('arguments', 'verify', `INTEGER NOT NULL DEFAULT 0`);
+addColumn('arguments', 'fallacy', `TEXT NOT NULL DEFAULT ''`);
+addColumn('arguments', 'backers', `TEXT NOT NULL DEFAULT '[]'`);
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS principles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS arg_principles (
+  argument_id INTEGER NOT NULL REFERENCES arguments(id) ON DELETE CASCADE,
+  principle_id INTEGER NOT NULL REFERENCES principles(id) ON DELETE CASCADE,
+  PRIMARY KEY (argument_id, principle_id)
+);
+CREATE INDEX IF NOT EXISTS idx_ap_principle ON arg_principles(principle_id);
+`);
+
 export function tx<T>(fn: () => T): T {
   db.exec('BEGIN');
   try {

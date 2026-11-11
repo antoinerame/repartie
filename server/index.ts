@@ -82,6 +82,14 @@ api.post('/arguments/:id/grade', (req, res) => res.json(repo.gradeArgument(id(re
 
 api.get('/search', (req, res) => res.json(repo.search(String(req.query.q ?? ''))));
 api.get('/gaps', (req, res) => res.json(repo.gaps({ topicId: num(req.query.topicId), subtopicId: num(req.query.subtopicId) })));
+api.get('/unsourced', (req, res) => res.json(repo.unsourced({ topicId: num(req.query.topicId), subtopicId: num(req.query.subtopicId) })));
+api.get('/backers', (_req, res) => res.json(repo.backerNames()));
+
+api.get('/principles', (_req, res) => res.json(repo.listPrinciples()));
+api.post('/principles', (req, res) => res.json(repo.createPrinciple(req.body)));
+api.get('/principles/:id', (req, res) => res.json(repo.getPrinciple(id(req))));
+api.patch('/principles/:id', (req, res) => { repo.updatePrinciple(id(req), req.body); res.json({ ok: true }); });
+api.delete('/principles/:id', (req, res) => { repo.deletePrinciple(id(req)); res.json({ ok: true }); });
 api.get('/training', (req, res) => res.json(repo.trainingCards({
   topicId: num(req.query.topicId), subtopicId: num(req.query.subtopicId),
   limit: num(req.query.limit), includeGaps: req.query.gaps === '1',
