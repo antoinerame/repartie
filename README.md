@@ -5,8 +5,12 @@ Des arbres de débat pour s'entraîner aux discussions politiques : ce que tu di
 ## Ce qu'il y a dedans
 
 - **Sujets → sous-parties → arbre horizontal** : chaque argument répond à son parent, coloré selon le camp (« Moi » / « En face »).
-- **Fiche d'argument** : phrase choc, développement, type (fait, valeur, exemple, sophisme), solidité, sources, point à concéder.
-- **Trous** : les arguments adverses sans réponse sont signalés partout et listés sur une page dédiée.
+- **Fiche d'argument** : phrase choc, développement, type (fait, valeur, exemple, sophisme typé), solidité du raisonnement, sources, « à vérifier ».
+- **Relation au parent** : chaque argument contredit, renforce ou nuance celui auquel il répond. Le site en déduit s'il va dans ton sens ou contre toi, quel que soit le camp qui parle.
+- **Branches closes** : « point concédé » ou « désaccord de valeurs assumé », avec une phrase « et pourtant » pour rebondir.
+- **Défendu par** : partis, personnalités ou organisations qui portent un argument, chacun avec sa source, et filtre de l'arbre par parti.
+- **À travailler** : les trous (arguments contre toi sans réponse) et ce qui est à vérifier (faits sans source, attributions sans source).
+- **Mes principes** : tes critères transversaux, avec pour chacun les arguments qui l'invoquent et ceux qui te l'opposent (test d'inversion).
 - **Entraînement** : on t'oppose un argument, tu réponds, tu compares, tu t'évalues. Les répliques ratées reviennent plus vite (répétition espacée).
 - **Fiche antisèche** par sous-partie, imprimable et lisible sur téléphone.
 - **Arguments réutilisables** : un même argument peut être lié dans plusieurs arbres.
@@ -57,7 +61,7 @@ Ensuite, en discussion :
 - « Trouve les trous dans mon sujet Nucléaire et propose-moi des réponses. »
 - « Joue l'adversaire sur la semaine de 4 jours, puis ajoute ce qu'on a découvert. »
 
-Outils exposés : `list_topics`, `get_tree`, `search`, `find_gaps`, `create_topic`, `create_subtopic`, `add_argument`, `add_arguments`, `link_argument`, `update_argument`, `move_argument`, `delete_argument`.
+Outils exposés : `list_topics`, `get_tree`, `search`, `find_gaps`, `find_unsourced`, `list_principles`, `get_principle`, `create_principle`, `create_topic`, `create_subtopic`, `add_argument`, `add_arguments`, `link_argument`, `update_argument`, `move_argument`, `delete_argument`.
 
 ## Développement local
 
